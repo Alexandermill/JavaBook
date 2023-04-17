@@ -14,7 +14,7 @@ public class Main {
 
         // readFixCharInLines(path, 20);
 
-        seekableReader(path, 80);
+        seekableReader(path, 30);
 
 
     }
@@ -23,19 +23,18 @@ public class Main {
         SeekableByteChannel sbc = Files.newByteChannel(path, StandardOpenOption.READ);
         ByteBuffer bufer = ByteBuffer.allocate(charInLine);
 
+        String separator = System.lineSeparator();
+
         int i = 0;
         int count = 0;
         boolean flag = true;
         String line = " ";
         String temp ="";
-        String t2 = "";
         String lineSepBySpace;
         long skip = 0;
 
         while (flag){
             sbc.position(skip);
-            // System.out.print(skip + " ");
-            // System.out.println(count);
 
             if((i = sbc.read(bufer)) < charInLine){
                 ByteBuffer bufer2 = ByteBuffer.allocate(i);
@@ -49,8 +48,8 @@ public class Main {
                 line = temp;
 
                 if(temp.contains("\n")){
-                    System.out.print("WARNING!!! this line contains \\n: ");
-                    
+                    line = temp.replace(separator, " ");
+
                 }
                 
                 lineSepBySpace = line.substring(0, line.lastIndexOf(" "));
@@ -63,21 +62,19 @@ public class Main {
                 skip += 1;
             }
 
+            skip += Long.valueOf(lineSepBySpace.length());
 
-
-            
+            if(lineSepBySpace.length() < charInLine && charInLine - lineSepBySpace.length() != 1){
+                int spaces = (charInLine - lineSepBySpace.length())/2;
+                lineSepBySpace = " ".repeat(spaces) + lineSepBySpace + " ".repeat(spaces);
+            }
             System.out.println(lineSepBySpace);
 
 
-            skip += Long.valueOf(lineSepBySpace.length());
             bufer.clear();
             count++;
 
         }
-
-
-
-
 
     }
 
