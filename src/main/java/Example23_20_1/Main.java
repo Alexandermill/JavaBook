@@ -25,11 +25,10 @@ public class Main {
 
         String separator = System.lineSeparator();
 
-        int i = 0;
-        int count = 0;
+        int i;
         boolean flag = true;
-        String line = " ";
-        String temp ="";
+        String line;
+        String temp;
         String lineSepBySpace;
         long skip = 0;
 
@@ -57,23 +56,19 @@ public class Main {
 
                       
 
-            if(lineSepBySpace.substring(0, 1).equals(" ")){
+            if(lineSepBySpace.charAt(0) == ' '){
                 lineSepBySpace = lineSepBySpace.substring(1);
                 skip += 1;
             }
 
-            skip += Long.valueOf(lineSepBySpace.length());
+            skip += lineSepBySpace.length();
 
             if(lineSepBySpace.length() < charInLine && charInLine - lineSepBySpace.length() != 1){
                 int spaces = (charInLine - lineSepBySpace.length())/2;
                 lineSepBySpace = " ".repeat(spaces) + lineSepBySpace + " ".repeat(spaces);
             }
             System.out.println(lineSepBySpace);
-
-
             bufer.clear();
-            count++;
-
         }
 
     }
@@ -81,10 +76,10 @@ public class Main {
     static void readFixCharInLines(Path path, int charInLine) throws IOException {
 
         boolean flag = true;
-        String line = " ";
+        String line;
         String temp;
         String lineSepBySpace;
-        long skip = 0l;
+        long skip = 0L;
 
         RandomAccessFile raf = new RandomAccessFile(path.toFile(), "r");
 
@@ -100,11 +95,11 @@ public class Main {
                 flag = false;
             }
 
-            if(lineSepBySpace.substring(0,1).equals(" ")){
-                System.out.println(lineSepBySpace.substring(1, lineSepBySpace.length()));
+            if(lineSepBySpace.charAt(0) == ' '){
+                System.out.println(lineSepBySpace.substring(1));
             } else System.out.println(lineSepBySpace);
 
-            skip += Long.valueOf(lineSepBySpace.length());
+            skip += lineSepBySpace.length();
         }
 
         raf.close();
