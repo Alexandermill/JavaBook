@@ -38,16 +38,13 @@ import java.util.concurrent.atomic.AtomicLong;
 public class Launcher {
 
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) {
 
         AtomicLong cursor = new AtomicLong(0);
         BlockingQueue<String> blockingQueue = new ArrayBlockingQueue<>(1024);
         LineExchange lineExchange = new LineExchange(cursor, blockingQueue);
 
-//        new Thread(new Reader(blockingQueue, cursor, "files\\input.txt")).start();
-//        new Thread(new Parser(blockingQueue, cursor, 80)).start();
-
-        new Thread(new Reader(lineExchange, "files\\input.txt", 100)).start();
+        new Thread(new Reader(lineExchange, "files\\vk.txt", 100)).start();
 //        Thread.sleep(2000);
         new Thread(new Parser(lineExchange, 80)).start();
 
@@ -55,8 +52,8 @@ public class Launcher {
     }
 
     public static class LineExchange{
-        AtomicLong cursor = new AtomicLong(0);
-        BlockingQueue<String> blockingQueue = new ArrayBlockingQueue<>(2);
+        AtomicLong cursor = null;
+        BlockingQueue<String> blockingQueue = null;
 
         public LineExchange(AtomicLong cursor, BlockingQueue<String> blockingQueue) {
             this.cursor = cursor;
@@ -79,7 +76,6 @@ public class Launcher {
         public synchronized Long getCursor(Long oldCursor) {
             while (oldCursor == cursor.get()){
                 try {
-                    System.out.println("\n" + Thread.currentThread()+ " start wait\n");
                     wait();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -117,6 +113,8 @@ public class Launcher {
         @Override
         public void run() {
             System.out.println("Parser начал работу." +Thread.currentThread().getName());
+            String separator = System.lineSeparator();
+
             while (true){
 //                try {
 //                    Thread.sleep(100);
@@ -125,23 +123,36 @@ public class Launcher {
 //                }
                 String line = null;
                 String temp;
+                long incrementCursor = 0;
                 line = lineExchange.takeLine();
+
+                if(line.contains(separator)){
+                    line = line.replace(separator, " ");
+                }
 
                 if(line.length() > chunkSize){
                     temp = line.substring(0, chunkSize);
                     temp = temp.substring(0, temp.lastIndexOf(" "));
                 } else temp = line;
 
+                if(temp.charAt(0) == ' '){
+                    temp = temp.substring(1);
+                    incrementCursor++;
+                }
 
+                incrementCursor += Long.valueOf(temp.length());
 
-                lineExchange.addCursor(Long.valueOf(temp.length()));
-//                System.out.print("Parser update cursor on" + temp.length() + " \n");
-//                System.out.println(temp);
+                if(temp.length() < chunkSize && temp.length() - chunkSize !=1){
+                    int spaces = (chunkSize - temp.length())/2;
+                    temp = " ".repeat(spaces) + temp + " ".repeat(spaces);
+                }
 
-
+                lineExchange.addCursor(incrementCursor);
                 if(line.equals("EOF")){
                     break;
                 }
+
+                System.out.println(temp);
 
             }
 
@@ -175,17 +186,13 @@ public class Launcher {
 
                 while (true) {
 //                    Thread.sleep(100);
-                    byteBuffer.clear();
+
                     long newCursor = lineExchange.getCursor(oldCursor);
                     sbc.position(newCursor);
                     buferSize = sbc.read(byteBuffer);
 
-//                    System.out.print("bufSize<capacity "+ (buferSize < byteBuffer.capacity())+" "+buferSize+" "+byteBuffer.capacity()+" ");
-
-
                     if(buferSize < 0){
                         lineExchange.addLine("EOF");
-                        System.out.print(" send in Q: EOF\n");
                         break;
                     }
 
@@ -196,26 +203,14 @@ public class Launcher {
                         sbc.read(byteBuffer);
                     }
 
-
-//                    System.out.print("get cursor: "+ newCursor+ " ");
-
-
                     lineExchange.addLine(new String(byteBuffer.array()));
-//                    System.out.print(" change cursor from" + oldCursor +" on "+ newCursor + "bufsize: "+buferSize);
-                    System.out.print(" send in Q: "+ new String(byteBuffer.array())+"\n");
                     oldCursor = newCursor;
+                    byteBuffer.clear();
+
+                }
 
 
-
-
-
-
-                    }
-
-
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            } catch (InterruptedException e) {
+            } catch (IOException | InterruptedException e) {
                 throw new RuntimeException(e);
             }
 
