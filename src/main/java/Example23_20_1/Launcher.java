@@ -38,14 +38,59 @@ import java.util.concurrent.atomic.AtomicLong;
 public class Launcher {
 
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
 
         AtomicLong cursor = new AtomicLong(0);
         BlockingQueue<String> blockingQueue = new ArrayBlockingQueue<>(1024);
+        LineExchange lineExchange = new LineExchange(cursor, blockingQueue);
 
-        new Thread(new Reader(blockingQueue, cursor, "files\\input.txt")).start();
-        new Thread(new Parser(blockingQueue, cursor, 80)).start();
+//        new Thread(new Reader(blockingQueue, cursor, "files\\input.txt")).start();
+//        new Thread(new Parser(blockingQueue, cursor, 80)).start();
 
+        new Thread(new Reader(lineExchange, "files\\input.txt")).start();
+        Thread.sleep(2000);
+        new Thread(new Parser(lineExchange, 80)).start();
+
+
+    }
+
+    public static class LineExchange{
+        AtomicLong cursor = new AtomicLong(0);
+        BlockingQueue<String> blockingQueue = new ArrayBlockingQueue<>(2);
+
+        public LineExchange(AtomicLong cursor, BlockingQueue<String> blockingQueue) {
+            this.cursor = cursor;
+            this.blockingQueue = blockingQueue;
+        }
+
+        public void addLine(String line) throws InterruptedException {
+            blockingQueue.put(line);
+
+        }
+
+        public String takeLine(){
+            try {
+                return blockingQueue.take();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        public synchronized Long getCursor(Long oldCursor) {
+            while (cursor.get() == oldCursor){
+                try {
+                    wait();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            return cursor.get();
+        }
+
+        public synchronized void addCursor(Long newCursor){
+            cursor.addAndGet(newCursor);
+            notifyAll();
+        }
 
     }
 
@@ -53,11 +98,18 @@ public class Launcher {
 
         BlockingQueue<String> blockingQueue = null;
         AtomicLong cursor = null;
+
+        LineExchange lineExchange = null;
         int chunkSize;
 
         public Parser(BlockingQueue<String> blockingQueue, AtomicLong cursor, int chunkSize) {
             this.blockingQueue = blockingQueue;
             this.cursor = cursor;
+            this.chunkSize = chunkSize;
+        }
+
+        public Parser(LineExchange lineExchange, int chunkSize) {
+            this.lineExchange = lineExchange;
             this.chunkSize = chunkSize;
         }
 
@@ -67,24 +119,24 @@ public class Launcher {
             while (true){
                 String line = null;
                 String temp;
-                try {
-                    line = blockingQueue.take();
+                line = lineExchange.takeLine();
+
+                if(line.length() > chunkSize){
                     temp = line.substring(0, chunkSize);
                     temp = temp.substring(0, temp.lastIndexOf(" "));
-
-                    System.out.println("Parser update cursor from " + cursor + " ");
-                    cursor.addAndGet(Long.valueOf(temp.length()));
-                    System.out.print("on" + cursor + " \n");
-                    System.out.println(temp);
+                } else temp = line;
 
 
-                    if(line.equals("EOF")){
-                        break;
-                    }
 
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
+                lineExchange.addCursor(Long.valueOf(temp.length()));
+//                System.out.print("Parser update cursor on" + temp.length() + " \n");
+                System.out.println(temp);
+
+
+                if(line.equals("EOF")){
+                    break;
                 }
+
             }
 
         }
@@ -95,11 +147,17 @@ public class Launcher {
 
         BlockingQueue<String> blockingQueue = null;
         AtomicLong cursor = null;
+        LineExchange lineExchange = null;
         String path;
 
         public Reader(BlockingQueue<String> blockingQueue, AtomicLong cursor, String path) {
             this.blockingQueue = blockingQueue;
             this.cursor = cursor;
+            this.path = path;
+        }
+
+        public Reader(LineExchange lineExchange, String path) {
+            this.lineExchange = lineExchange;
             this.path = path;
         }
 
@@ -113,23 +171,19 @@ public class Launcher {
 
                 ByteBuffer byteBuffer = ByteBuffer.allocate(100);
                 int buferSize=0;
-                long oldCursor = 0;
+                long oldCursor = -1;
 
                 while (true) {
 
-                    if (oldCursor == cursor.get()){
-                        System.out.println("Cursor not updated " + oldCursor);
-                    }
-                    System.out.println("start on cursor "+cursor);
-                    sbc.position(cursor.get());
+                    long newCursor = lineExchange.getCursor(oldCursor);
+                    sbc.position(lineExchange.getCursor(oldCursor));
                     buferSize = sbc.read(byteBuffer);
-                    blockingQueue.put(new String(byteBuffer.array()));
-//                    System.out.println(new String(byteBuffer.array()));
-                    oldCursor = cursor.get();
+                    lineExchange.addLine(new String(byteBuffer.array()));
+                    oldCursor = newCursor;
 
                     byteBuffer.clear();
                         if(buferSize < 0){
-                            blockingQueue.put("EOF");
+                            lineExchange.addLine("EOF");
                             break;
                         }
 
