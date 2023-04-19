@@ -47,8 +47,8 @@ public class Launcher {
 //        new Thread(new Reader(blockingQueue, cursor, "files\\input.txt")).start();
 //        new Thread(new Parser(blockingQueue, cursor, 80)).start();
 
-        new Thread(new Reader(lineExchange, "files\\input.txt")).start();
-        Thread.sleep(2000);
+        new Thread(new Reader(lineExchange, "files\\input.txt", 100)).start();
+//        Thread.sleep(2000);
         new Thread(new Parser(lineExchange, 80)).start();
 
 
@@ -77,11 +77,12 @@ public class Launcher {
         }
 
         public synchronized Long getCursor(Long oldCursor) {
-            while (cursor.get() == oldCursor){
+            while (oldCursor == cursor.get()){
                 try {
+                    System.out.println("\n" + Thread.currentThread()+ " start wait\n");
                     wait();
                 } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
+                    e.printStackTrace();
                 }
             }
             return cursor.get();
@@ -89,7 +90,7 @@ public class Launcher {
 
         public synchronized void addCursor(Long newCursor){
             cursor.addAndGet(newCursor);
-            notifyAll();
+            notify();
         }
 
     }
@@ -117,6 +118,11 @@ public class Launcher {
         public void run() {
             System.out.println("Parser начал работу." +Thread.currentThread().getName());
             while (true){
+//                try {
+//                    Thread.sleep(100);
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
                 String line = null;
                 String temp;
                 line = lineExchange.takeLine();
@@ -130,7 +136,7 @@ public class Launcher {
 
                 lineExchange.addCursor(Long.valueOf(temp.length()));
 //                System.out.print("Parser update cursor on" + temp.length() + " \n");
-                System.out.println(temp);
+//                System.out.println(temp);
 
 
                 if(line.equals("EOF")){
@@ -145,20 +151,14 @@ public class Launcher {
 
     public static class Reader implements Runnable {
 
-        BlockingQueue<String> blockingQueue = null;
-        AtomicLong cursor = null;
         LineExchange lineExchange = null;
         String path;
+        int initBufferSize;
 
-        public Reader(BlockingQueue<String> blockingQueue, AtomicLong cursor, String path) {
-            this.blockingQueue = blockingQueue;
-            this.cursor = cursor;
-            this.path = path;
-        }
-
-        public Reader(LineExchange lineExchange, String path) {
+        public Reader(LineExchange lineExchange, String path, int bufferSize) {
             this.lineExchange = lineExchange;
             this.path = path;
+            this.initBufferSize = bufferSize;
         }
 
         @Override
@@ -169,23 +169,46 @@ public class Launcher {
             try {
                 sbc = Files.newByteChannel(Paths.get(path), StandardOpenOption.READ);
 
-                ByteBuffer byteBuffer = ByteBuffer.allocate(100);
+                ByteBuffer byteBuffer = ByteBuffer.allocate(initBufferSize);
                 int buferSize=0;
                 long oldCursor = -1;
 
                 while (true) {
-
+//                    Thread.sleep(100);
+                    byteBuffer.clear();
                     long newCursor = lineExchange.getCursor(oldCursor);
-                    sbc.position(lineExchange.getCursor(oldCursor));
+                    sbc.position(newCursor);
                     buferSize = sbc.read(byteBuffer);
+
+//                    System.out.print("bufSize<capacity "+ (buferSize < byteBuffer.capacity())+" "+buferSize+" "+byteBuffer.capacity()+" ");
+
+
+                    if(buferSize < 0){
+                        lineExchange.addLine("EOF");
+                        System.out.print(" send in Q: EOF\n");
+                        break;
+                    }
+
+                    if(buferSize < byteBuffer.capacity()){
+                        byteBuffer.clear();
+                        byteBuffer = ByteBuffer.allocate(buferSize);
+                        sbc.position(newCursor);
+                        sbc.read(byteBuffer);
+                    }
+
+
+//                    System.out.print("get cursor: "+ newCursor+ " ");
+
+
                     lineExchange.addLine(new String(byteBuffer.array()));
+//                    System.out.print(" change cursor from" + oldCursor +" on "+ newCursor + "bufsize: "+buferSize);
+                    System.out.print(" send in Q: "+ new String(byteBuffer.array())+"\n");
                     oldCursor = newCursor;
 
-                    byteBuffer.clear();
-                        if(buferSize < 0){
-                            lineExchange.addLine("EOF");
-                            break;
-                        }
+
+
+
+
 
                     }
 

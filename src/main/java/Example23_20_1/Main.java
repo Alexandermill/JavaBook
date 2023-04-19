@@ -14,7 +14,7 @@ public class Main {
 
         // readFixCharInLines(path, 20);
 
-//        seekableReader(path, 30);
+        seekableReader(path, 80);
 
 
     }
