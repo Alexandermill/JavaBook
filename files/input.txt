@@ -1,8 +1,21 @@
-The "User Agent Switcher and Manager" extension allows you to alter your browser'
-User-Agent string, which is used by web servers to provide content to you. Bas
- on your browser type and operating system, web servers may provide different 
-ML content (such as a different styling or lower resolution images) or the Jav
-cript engine may operate differently. By altering your browser's User-Agent st
-ng with this extension, you can get the content intended for a different devic
- such as mobile content instead of desktop content for faster and lighter web 
+The "User  gent  witcher  nd  anager"  xtension  llows  ou  o alter your browser'
+User-Agent string,  hich  s  sed by web servers to provide content to you. Bas
+ on  our  rowser  ype  nd  perating  ystem,  eb  ervers  ay  rovide different 
+ML  ontent  such  s a different styling or lower resolution images) or the Jav
+cript engine  ay  perate differently. By altering your browser's User-Agent st
+ng with  his  xtension,  ou  an  et the content intended for a different devic
+ such  s  obile  ontent  nstead of desktop content for faster and lighter web 
 owsing.
+As  f  ersion  .2.4,  ou  an define a user-agent string for the curre
+ window  nly.  his means that all other browser windows will use the global se
+ing except  he  urrent window. This may help you organize your work better. No
+ that  ou  an  ave  s  any user-agent strings per-window as you want. To reset
+he window-based  A  ettings  se the "Restart" button in the toolbar popup. Thi
+button basically  estarts  he  xtension  nd  ence  ll  he  emporarily settings
+re wiped.  o  he window based settings is not a permanent setting (there is no
+ay to  ind    indow  hen   browser is restarted). It works until all the tabs 
+  he  indow are closed or the extension gets reloaded. To differentiate the wi
+ow with    efined  ser-agent  tring,  his  xtension  dds    adge notification 
+  he toolbar area. For the users of black- and white-list modes, please read t
+ options  age  o  ake  ure how the black- and white-lists are affected by the 
+wly introduced window-based user-agent string setting.

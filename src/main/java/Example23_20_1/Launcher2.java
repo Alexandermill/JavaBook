@@ -152,23 +152,25 @@ public class Launcher2 {
                 int numberSpaces = 0;
                 ByteBuffer byteBuffer;
 
+                System.out.println(line);
+
                 if(line.length() < chunkSize) {                        // определяем сколько пробелов нужно будет вставить
                     numberSpaces = chunkSize - line.length();
 
-                    System.out.println(line);
-
+                    int count =1;
                     int index = line.indexOf(" ");
-
-                    while (index >= 0) {                                   // определяем инжексы пробелов в строке
+                    while (index >= 0 && count <= numberSpaces) {                                   // определяем инжексы пробелов в строке
                         spaceIndexes.add(index);
                         index = line.indexOf(" ", index + 1);
                         try {
-                            System.out.println(oldCursor + index);
+                            System.out.print("\nstep on pos: "+oldCursor + index);
                             if(index > -1){
                                 channel.position(oldCursor + index);                        // расставляем пробелы
-                                byteBuffer = ByteBuffer.wrap(" ".getBytes(StandardCharsets.UTF_8));
+                                byteBuffer = ByteBuffer.wrap("  ".getBytes(StandardCharsets.UTF_8));
+                                System.out.print(" write \" \" \n");
                                 channel.write(byteBuffer);
                                 byteBuffer.clear();
+                                count++;
                             }
 
                         } catch (IOException e) {
